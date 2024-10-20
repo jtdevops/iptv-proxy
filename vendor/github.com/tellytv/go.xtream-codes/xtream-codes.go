@@ -238,12 +238,12 @@ func (c *XtreamClient) GetSeriesInfo(seriesID string) (*Series, error) {
 		return nil, seriesErr
 	}
 
+	episodesMapper := &EpisodesMapper{}
+	seriesData = episodesMapper.Mapper(seriesData)
+
 	seriesInfo := &Series{}
 
 	jsonErr := json.Unmarshal(seriesData, &seriesInfo)
-	// if jsonErr != nil {
-	// 	utils.WriteResponseToFileWithOverwrite(nil, seriesData, false, url)
-	// }
 
 	return seriesInfo, jsonErr
 }

@@ -179,6 +179,12 @@ type EpisodeInfo struct {
 	Video        *FFMPEGStreamInfo `json:"video,omitempty"`
 }
 
+type EpisodesMapper struct {
+	Episodes [][]SeriesEpisode	`json:"episodes"`
+	Info	 SeriesInfo			`json:"info"`
+	Seasons	 []interface{}		`json:"seasons"`		
+}
+
 // UnmarshalJSON implements custom unmarshaling for VideoOnDemandInfo
 func (vod *VideoOnDemandInfo) UnmarshalJSON(data []byte) error {
 	type Alias VideoOnDemandInfo
@@ -562,6 +568,35 @@ func (s *Series) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+// Mapper adds the mapped numbering of the series.episodes if it is not existing
+func (ep *EpisodesMapper) Mapper (data []byte) []byte {
+	if jsonErr := json.Unmarshal(data, &ep); jsonErr != nil {
+		return data
+	}
+
+	episodesListUnmapped := ep.Episodes
+	episodesListMapped := make(map[string][]SeriesEpisode)
+
+	for i := range episodesListUnmapped {
+		index := fmt.Sprintf("%d", i+1)
+		episodesListMapped[index] = episodesListUnmapped[i]
+	}
+
+	result := map[string]interface{}{
+		"seasons":  ep.Seasons,
+		"info":     ep.Info,
+		"episodes": episodesListMapped,
+	}
+
+	marshaledData, err := json.Marshal(result)
+	if err != nil {
+		log.Printf("Warning: Failed to marshal remapped Season.Episodes.")
+		return data
+	}
+
+	return marshaledData
 }
 
 // UnmarshalJSON implements custom unmarshaling for EPGInfo

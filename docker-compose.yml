@@ -30,4 +30,6 @@ services:
       #will be used for m3u and xtream auth poxy
       USER: test
       PASSWORD: testpassword
+      # Set to true to use experimental URL parsing
+      USE_EXPERIMENTAL_URL: false
 

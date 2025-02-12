@@ -76,6 +76,8 @@ func (c *Config) stream(ctx *gin.Context, oriURL *url.URL) {
 
 	mergeHttpHeader(req.Header, ctx.Request.Header)
 
+	utils.DebugLog("<- Outgoing URL: %s", req.URL)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		ctx.AbortWithError(http.StatusInternalServerError, err) // nolint: errcheck

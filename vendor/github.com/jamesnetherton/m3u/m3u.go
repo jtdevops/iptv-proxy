@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/pierre-emmanuelJ/iptv-proxy/pkg/utils"
 )
 
 // Playlist is a type that represents an m3u playlist containing 0 or more tracks
@@ -37,6 +39,7 @@ func Parse(fileName string) (Playlist, error) {
 	var f io.ReadCloser
 
 	if strings.HasPrefix(fileName, "http://") || strings.HasPrefix(fileName, "https://") {
+		utils.DebugLog("<- Outgoing URL: %s", fileName)
 		data, err := http.Get(fileName)
 		if err != nil {
 			return Playlist{},
@@ -44,6 +47,7 @@ func Parse(fileName string) (Playlist, error) {
 		}
 		f = data.Body
 	} else {
+		utils.DebugLog("<- Reading local file: %s", fileName)
 		file, err := os.Open(fileName)
 		if err != nil {
 			return Playlist{},

@@ -148,7 +148,63 @@ func (c *Config) xtreamGetAuto(ctx *gin.Context) {
 	c.xtreamGet(ctx)
 }
 
+// replaceQueryParams replaces username and password values in the query string while preserving order
+func replaceQueryParams(rawQuery string, username string, password string) string {
+	rawParams := strings.Split(rawQuery, "&")
+	var pairs []string
+
+	for _, param := range rawParams {
+		if param == "" {
+			continue
+		}
+		parts := strings.SplitN(param, "=", 2)
+		key := parts[0]
+		var value string
+		if len(parts) > 1 {
+			value = parts[1]
+		}
+
+		// URL-unescape the value for processing
+		unescapedValue, err := url.QueryUnescape(value)
+		if err != nil {
+			continue
+		}
+
+		// Replace username/password values if they match
+		switch key {
+		case "username":
+			value = url.QueryEscape(username)
+		case "password":
+			value = url.QueryEscape(password)
+		default:
+			value = url.QueryEscape(unescapedValue)
+		}
+
+		pairs = append(pairs, key+"="+value)
+	}
+
+	return strings.Join(pairs, "&")
+}
+
 func (c *Config) xtreamGet(ctx *gin.Context) {
+	// Create expURL with modified hostname and credentials
+	expURL := *ctx.Request.URL
+
+	// Parse the base URL to get scheme and host
+	baseURL, err := url.Parse(c.XtreamBaseURL)
+	if err != nil {
+		log.Printf("-> ** xtreamGet: url.Parse baseURL - error: %s", err.Error())
+		ctx.AbortWithError(http.StatusInternalServerError, err) // nolint: errcheck
+		return
+	}
+
+	// Set scheme and host from the parsed URL
+	expURL.Scheme = baseURL.Scheme
+	expURL.Host = baseURL.Host
+
+	// Replace username and password in query string while preserving order
+	expURL.RawQuery = replaceQueryParams(expURL.RawQuery, c.XtreamUser.String(), c.XtreamPassword.String())
+
 	rawURL := fmt.Sprintf("%s/get.php?username=%s&password=%s", c.XtreamBaseURL, c.XtreamUser, c.XtreamPassword)
 
 	q := ctx.Request.URL.Query()
@@ -161,7 +217,18 @@ func (c *Config) xtreamGet(ctx *gin.Context) {
 		rawURL = fmt.Sprintf("%s&%s=%s", rawURL, k, strings.Join(v, ","))
 	}
 
-	m3uURL, err := url.Parse(rawURL)
+	utils.DebugLog("|- xtreamGet expURL: %s", expURL.String())
+	utils.DebugLog("|- xtreamGet rawURL: %s", rawURL)
+
+	var urlToParse string
+	if useExp := strings.ToLower(os.Getenv("USE_EXPERIMENTAL_URL")); useExp == "true" || useExp == "1" || useExp == "yes" {
+		utils.DebugLog("Using experimental URL: %s", expURL.String())
+		urlToParse = expURL.String()
+	} else {
+		urlToParse = rawURL
+	}
+
+	m3uURL, err := url.Parse(urlToParse)
 	if err != nil {
 		log.Printf("-> ** xtreamGet: url.Parse - error: %s", err.Error())
 		ctx.AbortWithError(http.StatusInternalServerError, err) // nolint: errcheck

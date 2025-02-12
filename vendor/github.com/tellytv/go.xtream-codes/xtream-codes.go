@@ -448,6 +448,8 @@ func (c *XtreamClient) sendRequestWithURL(action string, parameters url.Values) 
 		url = fmt.Sprintf("%s&%s", url, parameters.Encode())
 	}
 
+	debugLog("<- Outgoing URL: %s", url)
+
 	request, httpErr := http.NewRequest("GET", url, nil)
 	if httpErr != nil {
 		return nil, url, httpErr
